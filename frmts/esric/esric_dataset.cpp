@@ -115,7 +115,7 @@ static inline GUInt32 u32lat(void *data)
 
 struct Bundle
 {
-    void Init(const char *filename)
+    void Init(const char *filename, bool relaxedHeaderValidation)
     {
         name = filename;
         fh.reset(VSIFOpenL(name.c_str(), "rb"));
@@ -125,11 +125,12 @@ struct Bundle
         // Check a few header locations, then read the index
         fh->Read(header, 1, 64);
         index.resize(BSZ * BSZ);
-        if (3 != u32lat(header) || 5 != u32lat(header + 12) ||
-            40 != u32lat(header + 32) || 0 != u32lat(header + 36) ||
-            (!isTpkx &&
-             BSZ * BSZ != u32lat(header + 4)) || /* skip this check for tpkx */
-            BSZ * BSZ * 8 != u32lat(header + 60) ||
+        bool bHeaderValidationFailed =
+            !relaxedHeaderValidation &&
+            ((!isTpkx && BSZ * BSZ != u32lat(header + 4)) ||
+             BSZ * BSZ * 8 != u32lat(header + 60));
+
+        if (bHeaderValidationFailed ||
             index.size() != fh->Read(index.data(), 8, index.size()))
         {
             fh.reset();
@@ -756,6 +757,8 @@ GDALDataset *ECDataset::Open(GDALOpenInfo *poOpenInfo,
 // target bundle is not valid
 Bundle &ECDataset::GetBundle(const char *fname)
 {
+    bool bRelaxedHeaderValidation = CPLFetchBool(
+        this->papszOpenOptions, "RELAXED_BUNDLE_HEADER_VALIDATION", false);
     for (auto &bundle : bundles)
     {
         // If a bundle is missing, it still occupies a slot, with fh == nullptr
@@ -767,7 +770,7 @@ Bundle &ECDataset::GetBundle(const char *fname)
     {
         if (nullptr == bundle.fh)
         {
-            bundle.Init(fname);
+            bundle.Init(fname, bRelaxedHeaderValidation);
             return bundle;
         }
     }
@@ -779,7 +782,7 @@ Bundle &ECDataset::GetBundle(const char *fname)
         0
 #endif
     ];
-    bundle.Init(fname);
+    bundle.Init(fname, bRelaxedHeaderValidation);
     return bundle;
 }
 

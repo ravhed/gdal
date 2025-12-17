@@ -231,3 +231,28 @@ def test_tpkx_default_full_extent(extent_source):
     assert ds.GetRasterBand(1).GetBlockSize() == [256, 256]
     assert ds.GetRasterBand(1).Checksum() == 59047
     assert ds.GetRasterBand(1).GetOverviewCount() == 3
+
+
+###############################################################################
+# Test reading a compact raster cache when headers validation is not relaxed
+# The bundle will not be used in this case
+
+
+def test_invalid_header_not_relaxed():
+    ds = gdal.OpenEx("/vsitar/data/esric/Layers_relaxed.tar/Layers/conf.xml")
+    assert ds.GetRasterBand(2).GetOverview(1).Checksum() == 0
+
+
+###############################################################################
+# Test reading a compact raster cache with relaxed header validation
+# The bundle with invalid headers will be OK to read
+
+
+def test_invalid_header_relaxed():
+    open_options = {}
+    open_options["RELAXED_BUNDLE_HEADER_VALIDATION"] = "YES"
+    ds = gdal.OpenEx(
+        "/vsitar/data/esric/Layers_relaxed.tar/Layers/conf.xml",
+        open_options=open_options,
+    )
+    assert ds.GetRasterBand(2).GetOverview(1).Checksum() == 46857

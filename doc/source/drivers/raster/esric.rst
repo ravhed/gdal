@@ -158,6 +158,15 @@ The following open options are available:
       ``TILING_SCHEME`` will return the extent of the whole tiling scheme, which
       is typically world coverage.
 
+-  .. oo:: RELAXED_BUNDLE_HEADER_VALIDATION
+      :choices: YES, NO
+      :default: NO
+      :since: 3.13.0
+
+      Relaxing the bundle file header validation will skip validating the record count and index
+      size fields in the header. These fields can have values that doesn't comply with the 
+      specification in certain situations.
+
 See Also
 --------
 -  Implemented as :source_file:`frmts/esric/esric_dataset.cpp`.
